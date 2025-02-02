@@ -24,20 +24,22 @@ export async function middleware(request) {
   // Protect admin routes
   if (path.startsWith('/admin')) {
     if (!token) {
-      return NextResponse.redirect(new URL('/auth/signin', request.url));
+      const callbackUrl = encodeURIComponent(path);
+      return NextResponse.redirect(new URL(`/auth/signin?callbackUrl=${callbackUrl}`, request.url));
     }
 
-    // Check if user has admin role
     if (token.role !== 'admin') {
       return NextResponse.redirect(new URL('/', request.url));
     }
+
+    return NextResponse.next();
   }
 
   // Protect API routes
   if (path.startsWith('/api/admin')) {
     if (!token) {
       return new NextResponse(
-        JSON.stringify({ error: 'Authentication required. Please sign in.' }),
+        JSON.stringify({ error: 'Authentication required' }),
         { 
           status: 401,
           headers: {
@@ -49,7 +51,7 @@ export async function middleware(request) {
 
     if (token.role !== 'admin') {
       return new NextResponse(
-        JSON.stringify({ error: 'Access denied. Admin privileges required.' }),
+        JSON.stringify({ error: 'Admin access required' }),
         { 
           status: 403,
           headers: {
@@ -58,8 +60,11 @@ export async function middleware(request) {
         }
       );
     }
+
+    return NextResponse.next();
   }
 
+  // For all other routes
   return NextResponse.next();
 }
 
