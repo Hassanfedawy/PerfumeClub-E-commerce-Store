@@ -5,7 +5,7 @@ export async function middleware(request) {
   const path = request.nextUrl.pathname;
 
   // Define public paths that don't require authentication
-  const isPublicPath = path === '/login' || path === '/register';
+  const isPublicPath = path === '/auth/signin' || path === '/auth/signup';
 
   // Get the token and validate session
   const token = await getToken({
@@ -24,7 +24,7 @@ export async function middleware(request) {
   // Protect admin routes
   if (path.startsWith('/admin')) {
     if (!token) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      return NextResponse.redirect(new URL('/auth/signin', request.url));
     }
 
     // Check if user has admin role
@@ -37,19 +37,38 @@ export async function middleware(request) {
   if (path.startsWith('/api/admin')) {
     if (!token) {
       return new NextResponse(
-        JSON.stringify({ error: 'authentication required' }),
-        { status: 401 }
+        JSON.stringify({ error: 'Authentication required. Please sign in.' }),
+        { 
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
       );
     }
 
     if (token.role !== 'admin') {
       return new NextResponse(
-        JSON.stringify({ error: 'unauthorized' }),
-        { status: 403 }
+        JSON.stringify({ error: 'Access denied. Admin privileges required.' }),
+        { 
+          status: 403,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
       );
     }
   }
 
-  // Allow the request to continue
   return NextResponse.next();
 }
+
+// Configure which paths should be processed by this middleware
+export const config = {
+  matcher: [
+    '/admin/:path*',
+    '/api/admin/:path*',
+    '/auth/signin',
+    '/auth/signup'
+  ]
+};
