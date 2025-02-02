@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ApiError, handleApiError } from '@/lib/apiError';
 import { getToken } from 'next-auth/jwt';
-import { uploadToCloudinary } from '@/lib/cloudinary';
+import { uploadToCloudinary, deleteFromCloudinary } from '@/lib/cloudinary';
 
 export async function POST(request) {
   try {
