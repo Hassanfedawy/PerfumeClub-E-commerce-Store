@@ -107,12 +107,45 @@ export async function POST(request) {
     }
 
     const userData = await request.json();
-    const { password, email, ...rest } = userData;
+    const { name, email, password, role = 'user', status = 'active' } = userData;
 
     // Validate required fields
-    if (!email || !password) {
+    if (!name || !email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: 'Name, email, and password are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
+        { status: 400 }
+      );
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters long' },
+        { status: 400 }
+      );
+    }
+
+    // Validate role
+    if (!['admin', 'user'].includes(role)) {
+      return NextResponse.json(
+        { error: 'Invalid role. Must be either "admin" or "user"' },
+        { status: 400 }
+      );
+    }
+
+    // Validate status
+    if (!['active', 'inactive'].includes(status)) {
+      return NextResponse.json(
+        { error: 'Invalid status. Must be either "active" or "inactive"' },
         { status: 400 }
       );
     }
@@ -129,13 +162,17 @@ export async function POST(request) {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Create user
     const user = await prisma.user.create({
       data: {
-        ...rest,
+        name,
         email,
         password: hashedPassword,
+        role,
+        status,
       },
       select: {
         id: true,
@@ -143,23 +180,16 @@ export async function POST(request) {
         email: true,
         role: true,
         status: true,
-        lastLogin: true,
         createdAt: true,
         image: true,
-        _count: {
-          select: {
-            orders: true,
-            reviews: true
-          }
-        }
       },
     });
 
-    return NextResponse.json(user);
+    return NextResponse.json(user, { status: 201 });
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json(
-      { error: 'Failed to create user' },
+      { error: 'Failed to create user', details: error.message },
       { status: 500 }
     );
   }
@@ -180,18 +210,30 @@ export async function PUT(request) {
     }
 
     // Validate role if it's being updated
-    if (updateData.role && !['admin', 'customer'].includes(updateData.role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    if (updateData.role && !['admin', 'user'].includes(updateData.role)) {
+      return NextResponse.json(
+        { error: 'Invalid role. Must be either "admin" or "user"' },
+        { status: 400 }
+      );
     }
 
     // Validate status if it's being updated
     if (updateData.status && !['active', 'inactive'].includes(updateData.status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid status. Must be either "active" or "inactive"' },
+        { status: 400 }
+      );
     }
 
     // Hash password if it's being updated
     if (updateData.password) {
-      updateData.password = await bcrypt.hash(updateData.password, 10);
+      if (updateData.password.length < 6) {
+        return NextResponse.json(
+          { error: 'Password must be at least 6 characters long' },
+          { status: 400 }
+        );
+      }
+      updateData.password = await bcrypt.hash(updateData.password, 12);
     }
 
     const user = await prisma.user.update({
@@ -203,16 +245,9 @@ export async function PUT(request) {
         email: true,
         role: true,
         status: true,
-        lastLogin: true,
         createdAt: true,
         image: true,
-        _count: {
-          select: {
-            orders: true,
-            reviews: true
-          }
-        }
-      }
+      },
     });
 
     return NextResponse.json(user);
@@ -227,7 +262,7 @@ export async function PUT(request) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to update user' },
+      { error: 'Failed to update user', details: error.message },
       { status: 500 }
     );
   }
@@ -303,7 +338,7 @@ export async function DELETE(request) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to delete user' },
+      { error: 'Failed to delete user', details: error.message },
       { status: 500 }
     );
   }

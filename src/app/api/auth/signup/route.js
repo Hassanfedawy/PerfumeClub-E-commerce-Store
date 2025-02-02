@@ -9,7 +9,23 @@ export async function POST(request) {
     // Validate input
     if (!name || !email || !password) {
       return NextResponse.json(
-        { message: 'Missing required fields' },
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters long' },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
         { status: 400 }
       );
     }
@@ -21,7 +37,7 @@ export async function POST(request) {
 
     if (existingUser) {
       return NextResponse.json(
-        { message: 'User already exists' },
+        { error: 'User already exists' },
         { status: 400 }
       );
     }
@@ -29,12 +45,14 @@ export async function POST(request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
+    // Create user with default role and status
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
+        role: 'user', // Default role
+        status: 'active', // Default status
       },
     });
 
@@ -48,7 +66,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Signup error:', error);
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { error: 'Failed to create user' },
       { status: 500 }
     );
   }
