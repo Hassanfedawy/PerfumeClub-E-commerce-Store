@@ -47,7 +47,8 @@ export async function GET(request) {
 
     const where = buildWhereClause(category, season, q);
 
-    if (!session?.user?.role === 'admin') {
+    // Only filter out of stock products for non-admin users
+    if (session?.user?.role !== 'admin') {
       where.stock = { gt: 0 };
     }
 
@@ -62,52 +63,15 @@ export async function GET(request) {
       orderBy: {
         [sortBy]: order,
       },
-      include: {
-        reviews: {
-          select: {
-            rating: true,
-          },
-        },
-      },
     });
-
-    // Calculate average rating for each product
-    const productsWithRating = products.map(product => {
-      const avgRating = product.reviews.length > 0
-        ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
-        : 0;
-      
-      const { reviews, ...rest } = product;
-      return {
-        ...rest,
-        avgRating,
-        numReviews: product.reviews.length,
-      };
-    });
-
-    // Get categories and seasons for filters
-    const [categories, seasons] = await Promise.all([
-      prisma.product.groupBy({
-        by: ['category'],
-        _count: true,
-      }),
-      prisma.product.groupBy({
-        by: ['season'],
-        _count: true,
-      }),
-    ]);
 
     return NextResponse.json({
-      products: productsWithRating,
-      filters: {
-        categories: categories.map(c => ({ name: c.category, count: c._count })),
-        seasons: seasons.map(s => ({ name: s.season, count: s._count })),
-      },
+      products,
       pagination: {
-        total,
-        pages: Math.ceil(total / limit),
         page,
         limit,
+        total,
+        pages: Math.ceil(total / limit),
       },
     });
   } catch (error) {

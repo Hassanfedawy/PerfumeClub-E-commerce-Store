@@ -238,6 +238,17 @@ const ProductsPage = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState({});
 
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (!session?.user || session.user.role !== 'admin') {
+      router.push('/');
+      return;
+    }
+
+    fetchProducts();
+  }, [session, status, router]);
+
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -266,7 +277,7 @@ const ProductsPage = () => {
   const handleSubmit = async (formData) => {
     try {
       const url = selectedProduct 
-        ? `/api/products`
+        ? `/api/products/${selectedProduct.id}`
         : '/api/products';
       
       const response = await fetch(url, {
@@ -275,7 +286,7 @@ const ProductsPage = () => {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(selectedProduct ? { ...formData, id: selectedProduct.id } : formData),
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -297,7 +308,7 @@ const ProductsPage = () => {
     try {
       setDeleteLoading(prev => ({ ...prev, [productId]: true }));
 
-      const response = await fetch(`/api/products?id=${productId}`, {
+      const response = await fetch(`/api/products/${productId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -319,17 +330,6 @@ const ProductsPage = () => {
       setDeleteLoading(prev => ({ ...prev, [productId]: false }));
     }
   };
-
-  useEffect(() => {
-    if (status === 'loading') return;
-    
-    if (!session?.user || session.user.role !== 'admin') {
-      router.push('/');
-      return;
-    }
-
-    fetchProducts();
-  }, [session, status, router]);
 
   if (status === 'loading' || loading) {
     return (

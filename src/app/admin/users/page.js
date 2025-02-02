@@ -1,92 +1,71 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
 const UserForm = ({ user, onSubmit, onCancel }) => {
-  const [formData, setFormData] = useState(
-    user || {
-      name: '',
-      email: '',
-      password: '',  
-      role: 'user',
-      status: 'active',
-    }
-  );
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    password: '',
+    role: user?.role || 'user',
+    status: user?.status || 'active'
+  });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      toast.error('Please enter a valid email address');
+    if (!formData.name || !formData.email || (!user && !formData.password)) {
+      toast.error('Please fill in all required fields');
       return;
     }
-
-    // Validate password if creating new user
-    if (!user && formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters long');
-      return;
-    }
-
-    // Validate name
-    if (formData.name.trim().length < 2) {
-      toast.error('Name must be at least 2 characters long');
-      return;
-    }
-
     onSubmit(formData);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700">Name</label>
+        <label className="block text-sm font-medium text-gray-700">Name *</label>
         <input
           type="text"
           value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
           required
-          minLength={2}
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Email</label>
+        <label className="block text-sm font-medium text-gray-700">Email *</label>
         <input
           type="email"
           value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
           required
         />
       </div>
 
-      {!user && (  
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Password</label>
-          <input
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-            required={!user}  
-            minLength={6}
-            placeholder="Minimum 6 characters"
-          />
-        </div>
-      )}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          {user ? 'Password (leave blank to keep current)' : 'Password *'}
+        </label>
+        <input
+          type="password"
+          value={formData.password}
+          onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+          required={!user}
+          minLength={6}
+        />
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700">Role</label>
         <select
           value={formData.role}
-          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
         >
           <option value="user">User</option>
@@ -98,7 +77,7 @@ const UserForm = ({ user, onSubmit, onCancel }) => {
         <label className="block text-sm font-medium text-gray-700">Status</label>
         <select
           value={formData.status}
-          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+          onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
         >
           <option value="active">Active</option>
@@ -106,111 +85,22 @@ const UserForm = ({ user, onSubmit, onCancel }) => {
         </select>
       </div>
 
-      <div className="flex justify-end space-x-3">
+      <div className="flex justify-end space-x-3 pt-4">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
-          {user ? 'Update User' : 'Add User'}
+          {user ? 'Update User' : 'Create User'}
         </button>
       </div>
     </form>
-  );
-};
-
-const UserDetails = ({ user, onClose }) => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchUserOrders();
-  }, []);
-
-  const fetchUserOrders = async () => {
-    try {
-      const response = await fetch(`/api/users/${user.id}/orders`);
-      if (!response.ok) throw new Error('Failed to fetch user orders');
-      const data = await response.json();
-      setOrders(data.orders);
-    } catch (error) {
-      console.error('Error fetching user orders:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="border-b pb-4">
-        <h3 className="text-lg font-medium">User Information</h3>
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-gray-500">Name</p>
-            <p className="font-medium">{user.name}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Email</p>
-            <p className="font-medium">{user.email}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Role</p>
-            <p className="font-medium capitalize">{user.role}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Joined</p>
-            <p className="font-medium">{new Date(user.createdAt).toLocaleDateString()}</p>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-lg font-medium mb-4">Order History</h3>
-        {loading ? (
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-          </div>
-        ) : orders.length > 0 ? (
-          <div className="space-y-4">
-            {orders.map((order) => (
-              <div key={order.id} className="border rounded-lg p-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Order #{order.id}</span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium
-                    ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
-                      order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
-                      'bg-yellow-100 text-yellow-800'}`}
-                  >
-                    {order.status}
-                  </span>
-                </div>
-                <div className="mt-2 text-sm text-gray-500">
-                  <p>Date: {new Date(order.createdAt).toLocaleDateString()}</p>
-                  <p>Total: ${order.total.toFixed(2)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500">No orders found</p>
-        )}
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
-        >
-          Close
-        </button>
-      </div>
-    </div>
   );
 };
 
@@ -237,7 +127,7 @@ const UsersPage = () => {
       const queryParams = new URLSearchParams({
         page: pagination.page,
         limit: pagination.limit,
-        search,
+        ...(search && { search }),
         ...(roleFilter !== 'all' && { role: roleFilter }),
         ...(statusFilter !== 'all' && { status: statusFilter }),
       });
@@ -252,8 +142,11 @@ const UsersPage = () => {
       }
 
       const data = await response.json();
-      setUsers(data.users);
-      setPagination(data.pagination);
+      setUsers(data.users || []);
+      setPagination(prev => ({
+        ...prev,
+        ...data.pagination,
+      }));
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error(error.message || 'Failed to load users');

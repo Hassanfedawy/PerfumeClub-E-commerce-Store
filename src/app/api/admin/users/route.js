@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 export async function GET(request) {
@@ -21,11 +21,11 @@ export async function GET(request) {
 
     let where = {};
     
-    if (role) {
+    if (role && role !== 'all') {
       where.role = role;
     }
     
-    if (status) {
+    if (status && status !== 'all') {
       where.status = status;
     }
 
@@ -50,12 +50,6 @@ export async function GET(request) {
           lastLogin: true,
           createdAt: true,
           image: true,
-          _count: {
-            select: {
-              orders: true,
-              reviews: true
-            }
-          }
         },
         orderBy: {
           createdAt: 'desc'
@@ -65,19 +59,6 @@ export async function GET(request) {
       }),
       prisma.user.count({ where })
     ]);
-
-    if (!users || users.length === 0) {
-      return NextResponse.json({
-        users: [],
-        pagination: {
-          total: 0,
-          pages: 0,
-          page,
-          limit
-        },
-        message: 'No users found'
-      });
-    }
 
     return NextResponse.json({
       users,
@@ -92,7 +73,7 @@ export async function GET(request) {
   } catch (error) {
     console.error('Error in users API:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch users', details: error.message },
+      { error: 'Failed to fetch users' },
       { status: 500 }
     );
   }
@@ -106,64 +87,31 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userData = await request.json();
-    const { name, email, password, role = 'user', status = 'active' } = userData;
+    const data = await request.json();
+    const { email, password, name, role = 'user', status = 'active' } = data;
 
     // Validate required fields
-    if (!name || !email || !password) {
+    if (!email || !password || !name) {
       return NextResponse.json(
-        { error: 'Name, email, and password are required' },
+        { error: 'Name, email and password are required' },
         { status: 400 }
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      );
-    }
-
-    // Validate password length
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'Password must be at least 6 characters long' },
-        { status: 400 }
-      );
-    }
-
-    // Validate role
-    if (!['admin', 'user'].includes(role)) {
-      return NextResponse.json(
-        { error: 'Invalid role. Must be either "admin" or "user"' },
-        { status: 400 }
-      );
-    }
-
-    // Validate status
-    if (!['active', 'inactive'].includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid status. Must be either "active" or "inactive"' },
-        { status: 400 }
-      );
-    }
-
-    // Check if email is already in use
+    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email }
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Email is already in use' },
+        { error: 'User with this email already exists' },
         { status: 400 }
       );
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
     const user = await prisma.user.create({
@@ -172,24 +120,18 @@ export async function POST(request) {
         email,
         password: hashedPassword,
         role,
-        status,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        createdAt: true,
-        image: true,
-      },
+        status
+      }
     });
 
-    return NextResponse.json(user, { status: 201 });
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+
+    return NextResponse.json(userWithoutPassword);
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json(
-      { error: 'Failed to create user', details: error.message },
+      { error: 'Failed to create user' },
       { status: 500 }
     );
   }
@@ -203,66 +145,55 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { userId, ...updateData } = await request.json();
+    const data = await request.json();
+    const { id, email, password, name, role, status } = data;
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-
-    // Validate role if it's being updated
-    if (updateData.role && !['admin', 'user'].includes(updateData.role)) {
+    if (!id) {
       return NextResponse.json(
-        { error: 'Invalid role. Must be either "admin" or "user"' },
+        { error: 'User ID is required' },
         { status: 400 }
       );
     }
 
-    // Validate status if it's being updated
-    if (updateData.status && !['active', 'inactive'].includes(updateData.status)) {
-      return NextResponse.json(
-        { error: 'Invalid status. Must be either "active" or "inactive"' },
-        { status: 400 }
-      );
-    }
-
-    // Hash password if it's being updated
-    if (updateData.password) {
-      if (updateData.password.length < 6) {
-        return NextResponse.json(
-          { error: 'Password must be at least 6 characters long' },
-          { status: 400 }
-        );
-      }
-      updateData.password = await bcrypt.hash(updateData.password, 12);
-    }
-
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        createdAt: true,
-        image: true,
-      },
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id }
     });
 
-    return NextResponse.json(user);
-  } catch (error) {
-    console.error('Error updating user:', error);
-    
-    if (error.code === 'P2025') {
+    if (!existingUser) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       );
     }
 
+    // Prepare update data
+    const updateData = {
+      ...(name && { name }),
+      ...(email && { email }),
+      ...(role && { role }),
+      ...(status && { status })
+    };
+
+    // If password is provided, hash it
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    // Update user
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: updateData
+    });
+
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = updatedUser;
+
+    return NextResponse.json(userWithoutPassword);
+  } catch (error) {
+    console.error('Error updating user:', error);
     return NextResponse.json(
-      { error: 'Failed to update user', details: error.message },
+      { error: 'Failed to update user' },
       { status: 500 }
     );
   }
@@ -286,26 +217,9 @@ export async function DELETE(request) {
       );
     }
 
-    // Prevent self-deletion
-    if (id === session.user.id) {
-      return NextResponse.json(
-        { error: 'Cannot delete your own account' },
-        { status: 400 }
-      );
-    }
-
-    // Check if user exists and has any active orders
+    // Check if user exists
     const user = await prisma.user.findUnique({
-      where: { id },
-      include: {
-        orders: {
-          where: {
-            status: {
-              in: ['PENDING', 'PROCESSING', 'SHIPPED']
-            }
-          }
-        }
-      }
+      where: { id }
     });
 
     if (!user) {
@@ -315,30 +229,30 @@ export async function DELETE(request) {
       );
     }
 
-    if (user.orders.length > 0) {
-      return NextResponse.json(
-        { error: 'Cannot delete user with active orders' },
-        { status: 400 }
-      );
+    // Prevent deleting the last admin
+    if (user.role === 'admin') {
+      const adminCount = await prisma.user.count({
+        where: { role: 'admin' }
+      });
+
+      if (adminCount <= 1) {
+        return NextResponse.json(
+          { error: 'Cannot delete the last admin user' },
+          { status: 400 }
+        );
+      }
     }
 
+    // Delete user
     await prisma.user.delete({
-      where: { id },
+      where: { id }
     });
 
     return NextResponse.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);
-
-    if (error.code === 'P2025') {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
     return NextResponse.json(
-      { error: 'Failed to delete user', details: error.message },
+      { error: 'Failed to delete user' },
       { status: 500 }
     );
   }

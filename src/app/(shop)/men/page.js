@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { useDebounce } from '@/hooks/useDebounce';
 import SeasonFilter from '@/components/SeasonFilter';
+import toast from 'react-hot-toast';
 
 export default function MenPage() {
   const [products, setProducts] = useState([]);
@@ -35,17 +36,27 @@ export default function MenPage() {
         order,
         page: pagination.page,
         limit: pagination.limit,
-        season: selectedSeason !== 'all' ? selectedSeason : '',
+        ...(selectedSeason !== 'all' && { season: selectedSeason }),
       });
 
-      const response = await fetch(`/api/products?${queryParams.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch products');
+      const response = await fetch(`/api/products?${queryParams}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch products');
+      }
       
       const data = await response.json();
-      setProducts(data.products);
-      setPagination(data.pagination);
+      setProducts(data.products || []);
+      setPagination(prev => ({
+        ...prev,
+        ...data.pagination,
+      }));
     } catch (error) {
       console.error('Error fetching products:', error);
+      toast.error(error.message || 'Failed to load products');
     } finally {
       setLoading(false);
     }
