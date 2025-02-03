@@ -1,19 +1,22 @@
 "use client"
 
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 const Banner = () => {
   return (
     <div className="relative bg-gray-900 overflow-hidden">
       {/* Background image */}
-      <div className="absolute inset-0">
-        <img
-          src="/banner-bg.jpg"
-          alt="Luxury perfumes"
-          className="w-full h-full object-cover opacity-50"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-900/70 to-pink-900/70" />
-      </div>
+      <div className="absolute inset-0 h-screen"> {/* Add a fixed height */}
+  <Image 
+    src="/images/image1.jpg"
+    alt="Luxury perfumes"
+    className="w-full h-full object-cover" // Use object-cover here
+    width={1920} // Add width and height for better performance
+    height={1080}
+  />
+  <div className="absolute inset-0 bg-gradient-to-r from-purple-900/70 to-pink-900/70" />
+</div>
 
       {/* Content */}
       <div className="relative max-w-7xl mx-auto py-24 px-4 sm:py-32 sm:px-6 lg:px-8">
@@ -49,15 +52,7 @@ const Banner = () => {
           </div>
         </motion.div>
 
-        {/* Featured brands */}
-        <div className="mt-16">
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:grid-cols-5">
-            <div className="col-span-1 flex justify-center">
-              <img className="h-12 opacity-50" src="/brand1.png" alt="Brand" />
-            </div>
-            {/* Add more brand logos as needed */}
-          </div>
-        </div>
+    
       </div>
     </div>
   );
