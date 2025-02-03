@@ -25,9 +25,15 @@ const OrderDetails = ({ order, onClose, onUpdateStatus }) => (
       <div className="space-y-6">
         <div className="border-b pb-4">
           <h3 className="text-lg font-medium mb-2">Customer Information</h3>
-          <p><span className="font-medium">Name:</span> {order.customerName}</p>
-          <p><span className="font-medium">Phone:</span> {order.customerPhone}</p>
-          <p><span className="font-medium">Address:</span> {order.customerAddress}</p>
+          <p>
+            <span className="font-medium">Name:</span> {order.customerName}
+          </p>
+          <p>
+            <span className="font-medium">Phone:</span> {order.customerPhone}
+          </p>
+          <p>
+            <span className="font-medium">Address:</span> {order.customerAddress}
+          </p>
         </div>
 
         <div className="border-b pb-4">
@@ -36,7 +42,11 @@ const OrderDetails = ({ order, onClose, onUpdateStatus }) => (
             {order.items.map((item) => (
               <div key={item.id} className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <img src={item.product.imageUrl} alt={item.product.name} className="w-16 h-16 object-cover rounded" />
+                  <img
+                    src={item.product.imageUrl}
+                    alt={item.product.name}
+                    className="w-16 h-16 object-cover rounded"
+                  />
                   <div className="ml-4">
                     <p className="font-medium">{item.product.name}</p>
                     <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
@@ -97,12 +107,13 @@ export default function OrdersPage() {
   const { data: session } = useSession();
 
   useEffect(() => {
-    if (!session?.user?.role === 'admin') {
+    if (!(session?.user?.role === 'admin')) {
       router.push('/');
       return;
     }
 
     fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, statusFilter]);
 
   const fetchOrders = async () => {
@@ -135,10 +146,12 @@ export default function OrdersPage() {
       if (!response.ok) throw new Error('Failed to update order status');
 
       // Update local state
-      setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
-      ));
-      
+      setOrders(
+        orders.map((order) =>
+          order.id === orderId ? { ...order, status: newStatus } : order
+        )
+      );
+
       // Close the modal
       setSelectedOrder(null);
     } catch (error) {
@@ -187,7 +200,7 @@ export default function OrdersPage() {
                 placeholder="Search by customer name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 px-4 py-2 rounded-md border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                className="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:border-purple-500 focus:ring-purple-500"
               />
               <button
                 type="submit"
@@ -197,11 +210,11 @@ export default function OrdersPage() {
               </button>
             </div>
           </form>
-          
+
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 rounded-md border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+            className="px-4 py-2 rounded-md border border-gray-300 focus:border-purple-500 focus:ring-purple-500"
           >
             <option value="">All Status</option>
             <option value="pending">Pending</option>
@@ -212,28 +225,49 @@ export default function OrdersPage() {
           </select>
         </div>
 
-        <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+        {/* Table Wrapper for responsive horizontal scrolling */}
+        <div className="bg-white shadow-sm rounded-lg overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Order ID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Customer
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{order.id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.customerName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    #{order.id}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {order.customerName}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(order.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(order.status)}`}>
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
+                        order.status
+                      )}`}
+                    >
                       {order.status}
                     </span>
                   </td>
