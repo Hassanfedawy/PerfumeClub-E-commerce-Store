@@ -45,7 +45,7 @@ export default function AdminLayout({ children }) {
 
 
       {/* Main Content */}
-      <main className={`ml-20 transition-all duration-300 ease-in-out`}>
+      <main className={`mx-auto transition-all duration-300 ease-in-out`}>
         <div className="p-8">
           {children}
         </div>

@@ -275,24 +275,26 @@ const ProductsPage = () => {
   };
 
   const handleDelete = async (productId) => {
+    if (!confirm('Are you sure you want to delete this product?')) {
+      return;
+    }
+
     try {
-      setDeleteLoading((prev) => ({ ...prev, [productId]: true }));
       const response = await fetch(`/api/products?id=${productId}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        credentials: 'include'
       });
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to delete product');
       }
+
       toast.success('Product deleted successfully');
       fetchProducts();
     } catch (error) {
       console.error('Error deleting product:', error);
       toast.error(error.message || 'Failed to delete product');
-    } finally {
-      setDeleteLoading((prev) => ({ ...prev, [productId]: false }));
     }
   };
 

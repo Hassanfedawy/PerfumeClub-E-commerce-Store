@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { ObjectId } from 'mongodb'; // Import ObjectId from MongoDB
+
 
 // Get a single product
 export async function GET(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const product = await prisma.product.findUnique({
       where: { id },
     });
@@ -39,7 +41,7 @@ export async function PUT(request, { params }) {
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
 
     const product = await prisma.product.update({
@@ -57,7 +59,7 @@ export async function PUT(request, { params }) {
   }
 }
 
-// Delete a product
+
 export async function DELETE(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -68,9 +70,35 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    const { id } = params;
+    // Await params to access its properties
+    const { id } = await params;
+
+    // Validate MongoDB ObjectId
+    if (!ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { error: 'Invalid product ID' },
+        { status: 400 }
+      );
+    }
+
+    // Convert the id to a string (Prisma expects a string)
+    const productId = id.toString();
+
+    // Check if the product exists
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
+    }
+
+    // Delete the product
     await prisma.product.delete({
-      where: { id },
+      where: { id: productId },
     });
 
     return NextResponse.json({ message: 'Product deleted successfully' });
