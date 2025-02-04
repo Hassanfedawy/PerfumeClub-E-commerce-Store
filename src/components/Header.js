@@ -88,7 +88,7 @@ export default function Header() {
             </Link>
 
             {session ? (
-              <div className="relative group">
+              <div className="relative z-50 group">
                 <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
                   <UserIcon className="h-6 w-6" />
                   <span>{session.user.name}</span>

@@ -51,6 +51,7 @@ export default function ProductDetail({ params }) {
       name: product.name,
       price: product.price,
       imageUrl: product.imageUrl,
+      category: product.category,
       quantity,
     }));
     toast.success('Added to cart');

@@ -1,5 +1,4 @@
 "use client"
-
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { setProducts } from '../redux/productSlice';
@@ -9,7 +8,14 @@ export default function HomePageWrapper({ children, products }) {
 
   useEffect(() => {
     if (Array.isArray(products) && products.length > 0) {
-      dispatch(setProducts(products));
+      // Convert Date objects to ISO strings
+      const serializedProducts = products.map(product => ({
+        ...product,
+        createdAt: product.createdAt instanceof Date ? product.createdAt.toISOString() : product.createdAt,
+        updatedAt: product.updatedAt instanceof Date ? product.updatedAt.toISOString() : product.updatedAt,
+      }));
+      
+      dispatch(setProducts(serializedProducts));
     }
   }, [dispatch, products]);
 

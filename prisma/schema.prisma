@@ -42,7 +42,7 @@ model User {
 
 model Order {
   id              String      @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String      @db.ObjectId
+  userId          String?     @db.ObjectId
   status          String      @default("pending")
   total           Float
   shipping        Float
@@ -52,7 +52,7 @@ model Order {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   items           OrderItem[]
-  user            User        @relation(fields: [userId], references: [id])
+  user            User?       @relation(fields: [userId], references: [id])
 }
 
 model OrderItem {

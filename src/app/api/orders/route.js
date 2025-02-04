@@ -8,9 +8,47 @@ export async function POST(request) {
     const session = await getServerSession(authOptions);
     
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      // Allow guest users to place orders
+      const { items, customerInfo, total, shipping } = await request.json();
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return NextResponse.json({ error: 'Invalid items' }, { status: 400 });
+      }
+
+      if (!customerInfo || !customerInfo.name || !customerInfo.phone || !customerInfo.address) {
+        return NextResponse.json({ error: 'Customer information is required' }, { status: 400 });
+      }
+
+      // Create the order without userId for guest users
+      const order = await prisma.order.create({
+        data: {
+          status: 'pending',
+          total,
+          shipping,
+          customerName: customerInfo.name,
+          customerPhone: customerInfo.phone,
+          customerAddress: customerInfo.address,
+          items: {
+            create: items.map(item => ({
+              productId: item.id,
+              quantity: item.quantity,
+              price: item.price
+            }))
+          }
+        },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          }
+        }
+      });
+
+      return NextResponse.json({ order });
     }
 
+    // Existing logic for authenticated users
     const { items, customerInfo, total, shipping } = await request.json();
     
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -21,7 +59,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Customer information is required' }, { status: 400 });
     }
 
-    // Create the order
+    // Create the order for authenticated users
     const order = await prisma.order.create({
       data: {
         userId: session.user.id,
@@ -51,6 +89,7 @@ export async function POST(request) {
     return NextResponse.json({ order });
   } catch (error) {
     console.error('Order creation error:', error);
+    console.error('Payload:', { items, customerInfo, total, shipping });
     return NextResponse.json(
       { error: 'Failed to create order' },
       { status: 500 }

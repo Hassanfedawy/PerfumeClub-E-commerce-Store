@@ -16,6 +16,8 @@ export default function ProductCard({ product }) {
       name: product.name,
       price: product.price,
       image: product.imageUrl,
+      category: product.category,
+      alt: product.name,
       quantity: 1,
     }));
     toast.success('Added to cart');
@@ -25,13 +27,19 @@ export default function ProductCard({ product }) {
     <div className="group relative bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
       <Link href={`/${product.category}/${product.id}`}>
         <div className="aspect-h-1 aspect-w-1 w-full overflow-hidden bg-gray-200 xl:aspect-h-8 xl:aspect-w-7">
-          <Image
-            src={product.imageUrl}
-            alt={product.name}
-            width={300}
-            height={300}
-            className="h-full w-full object-cover object-center group-hover:opacity-75"
-          />
+          {product.imageUrl ? (
+            <Image
+              src={product.imageUrl}
+              alt={product.name}
+              width={300}
+              height={300}
+              className="h-full w-full object-cover object-center group-hover:opacity-75"
+            />
+          ) : (
+            <div className="h-full w-full bg-gray-200 flex items-center justify-center">
+              <span>No Image Available</span>
+            </div>
+          )}
         </div>
       </Link>
       <div className="p-4">
